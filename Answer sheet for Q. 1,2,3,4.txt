@@ -1,0 +1,356 @@
+Q.1,2,3,4
+-----------------------------------------------------------
+Controller for index and Edit page
+
+using FinalExam_KH.Models;
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+
+namespace FinalExam_KH.Controllers
+{
+    public class ProductsController : Controller
+    {
+        // GET: Products
+        public ActionResult Index(int id=1)
+        {
+            SqlConnection cn = new SqlConnection();
+            cn.ConnectionString = @"Data Source=(localdb)\MsSqlLocalDB;Initial Catalog=Exam;Integrated Security=true";
+            cn.Open();
+            SqlCommand cmdget = new SqlCommand();
+            cmdget.Connection = cn;
+            cmdget.CommandType = System.Data.CommandType.StoredProcedure;
+            cmdget.CommandText = "GetProducts";
+            List<Product> p1 = new List<Product>();
+            try
+            {
+                SqlDataReader dr = cmdget.ExecuteReader();
+                while(dr.Read())
+                {
+                    p1.Add(new Product { ProdctId = (int)dr["ProductId"], ProductName = (string)dr["ProductName"], Rate = (decimal)dr["Rate"], Description = (string)dr["Description"], Category = (string)dr["CategoryName"] });
+
+                }
+                dr.Close();
+            }
+            catch
+            {
+
+            }
+            finally
+            {
+                cn.Close();
+            }
+            return View(p1);
+
+        }
+
+      
+
+
+        // GET: Products/Edit/5
+        public ActionResult Edit(int id=1)
+        {
+            SqlConnection cn = new SqlConnection();
+            cn.ConnectionString = @"Data Source=(localdb)\MsSqlLocalDB;Initial Catalog=Exam;Integrated Security=true";
+            cn.Open();
+            SqlCommand cmdEdit = new SqlCommand();
+            cmdEdit.Connection = cn;
+            cmdEdit.CommandType = System.Data.CommandType.StoredProcedure;
+            cmdEdit.CommandText = "GetProductEdit";
+            cmdEdit.Parameters.AddWithValue("@ProductId", id);
+            SqlDataReader dr = cmdEdit.ExecuteReader();
+            Product p1 = null;
+            if (dr.Read())
+            {
+                p1 = new Product { ProdctId = (int)dr["ProductId"], ProductName = (string)dr["ProductName"], Rate = (decimal)dr["Rate"], Description = (string)dr["Description"], Category = (string)dr["CategoryName"] };
+            }
+            else
+            {
+                ViewBag.ErorMessage = "not valid Details";
+            }
+            dr.Close();
+            cn.Close();
+            return View(p1);
+
+
+        }
+
+        // POST: Products/Edit/5
+        [HttpPost]
+        public ActionResult Edit(Product p1,int id=1)
+        {
+
+            SqlConnection cn = new SqlConnection();
+            cn.ConnectionString = @"Data Source=(localdb)\MsSqlLocalDB;Initial Catalog=Exam;Integrated Security=true";
+            cn.Open();
+            SqlCommand cmdEdit = new SqlCommand();
+            cmdEdit.Connection = cn;
+            cmdEdit.CommandType = System.Data.CommandType.StoredProcedure;
+            cmdEdit.CommandText = "ProductEdit";
+            cmdEdit.Parameters.AddWithValue("@ProductId", p1.ProdctId);
+            cmdEdit.Parameters.AddWithValue("@ProductName", p1.ProductName);
+            cmdEdit.Parameters.AddWithValue("@Rate",p1.Rate );
+            cmdEdit.Parameters.AddWithValue("@Description", p1.Description);
+            cmdEdit.Parameters.AddWithValue("@CategoryName", p1.Category);
+
+            try
+            {
+
+                cmdEdit.ExecuteNonQuery();
+                cn.Close();
+                return RedirectToAction("index");
+
+                
+            }
+            catch
+            {
+                return View();
+            }
+        }
+
+    }
+}
+
+====================================================================================
+
+Stored procedure
+
+for index page
+==================================
+CREATE PROCEDURE [dbo].GetProducts
+	
+AS
+	SELECT * from Products;
+RETURN 0
+
+
+for Edit(get)
+================================
+CREATE PROCEDURE [dbo].GetProductEdit
+	@ProductId int
+AS
+	SELECT * from Products where ProductId=@ProductId
+RETURN 0
+
+for Edit(Post)
+======================================
+CREATE PROCEDURE [dbo].ProductEdit
+	@ProductId int,
+	@ProductName varchar(50),
+	@Rate decimal (18,2),
+	@Description varchar(200),
+	@CategoryName varchar(50)
+
+AS
+	update Products set  ProductName=@ProductName,Rate=@Rate,@Description=@Description,CategoryName=@CategoryName where ProductId=@ProductId;
+
+RETURN 0
+
+========================================
+
+index view
+
+===========================================
+
+@model IEnumerable<FinalExam_KH.Models.Product>
+
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Index</h2>
+
+
+<table class="table">
+    <tr>
+        <th>
+            @Html.DisplayNameFor(model => model.ProdctId)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.ProductName)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.Rate)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.Description)
+        </th>
+        <th>
+            @Html.DisplayNameFor(model => model.Category)
+        </th>
+        <th></th>
+    </tr>
+
+@foreach (var item in Model) {
+    <tr>
+        <td>
+            @Html.DisplayFor(modelItem => item.ProdctId)
+            @Html.ActionLink("Edit", "Edit", new { id = item.ProdctId })
+         
+            
+
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.ProductName)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.Rate)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.Description)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.Category)
+        </td>
+        <td>
+           
+           
+        </td>
+    </tr>
+}
+
+</table>
+
+@{ 
+    @Html.Partial("MyPartialView");
+}
+
+=================================================
+
+edit view
+
+==========================
+@model FinalExam_KH.Models.Product
+
+@{
+    ViewBag.Title = "Edit";
+}
+
+<h2>Edit</h2>
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-horizontal">
+        <h4>Product</h4>
+        <hr />
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <div class="form-group">
+            @Html.LabelFor(model => model.ProdctId, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.ProdctId, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.ProdctId, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.ProductName, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.ProductName, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.ProductName, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.Rate, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Rate, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Rate, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.Description, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Description, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Description, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.Category, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.EditorFor(model => model.Category, new { htmlAttributes = new { @class = "form-control" } })
+                @Html.ValidationMessageFor(model => model.Category, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="update" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+}
+
+<div>
+    @Html.ActionLink("go to index page", "Index")
+</div>
+
+@{
+    @Html.Partial("MyPartialView");
+}
+
+======================================
+partial view
+
+==========================
+
+<h5>Created by Aniket Pabale</h5>
+<h5>Center = Kharghar</h5>
+<h5>RollNo = 210940320020</h5>
+=========================================
+
+model class for Product
+
+==================================
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Web;
+
+namespace FinalExam_KH.Models
+{
+    public class Product
+    {
+        [Display(Name = "Product Id")]
+        [Required(ErrorMessage="please enter product id")]
+        public int ProdctId { get; set; }
+
+        [Display(Name ="Product Name")]
+        [Required(ErrorMessage ="please Enter Product Name ")]
+        public string ProductName { get; set; }
+
+        [Display(Name = "Rate")]
+        [Required(ErrorMessage = "please Enter Rate ")]
+        public decimal Rate { get; set; }
+
+        [Display(Name = "Description")]
+        [Required(ErrorMessage = "please Enter Description ")]
+        public string Description { get; set; }
+
+        [Display(Name = "Category")]
+        [Required(ErrorMessage = "please Enter Category ")]
+        public string Category { get; set; }
+
+
+
+
+
+
+    }
+}
+
+=======================================================
+
+
+
+
+
+
